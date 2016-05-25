@@ -15,7 +15,9 @@
  */
 package org.lightadmin.core.web.support;
 
+import org.springframework.data.mapping.IdentifierAccessor;
 import org.springframework.data.mapping.PersistentEntity;
+import org.springframework.data.mapping.context.PersistentEntities;
 import org.springframework.data.repository.core.EntityInformation;
 import org.springframework.data.repository.support.Repositories;
 import org.springframework.data.rest.core.mapping.ResourceMappings;
@@ -37,7 +39,7 @@ import static org.springframework.beans.PropertyAccessorFactory.forDirectFieldAc
 public class DynamicPersistentEntityResourceAssembler extends PersistentEntityResourceAssembler {
 
     public DynamicPersistentEntityResourceAssembler(PersistentEntityResourceAssembler resourceAssembler) {
-        super(repositories(resourceAssembler), entityLinks(resourceAssembler), projector(resourceAssembler), mappings(resourceAssembler));
+        super(entities(resourceAssembler), entityLinks(resourceAssembler), projector(resourceAssembler), mappings(resourceAssembler));
     }
 
     /**
@@ -47,7 +49,7 @@ public class DynamicPersistentEntityResourceAssembler extends PersistentEntityRe
     public Link getSelfLinkFor(Object instance) {
         Assert.notNull(instance, "Domain object must not be null!");
 
-        Repositories repositories = repositories(this);
+        PersistentEntities repositories = entities(this);
 
         Class instanceType = instance.getClass();
         PersistentEntity<?, ?> entity = repositories.getPersistentEntity(instanceType);
@@ -56,8 +58,8 @@ public class DynamicPersistentEntityResourceAssembler extends PersistentEntityRe
             throw new IllegalArgumentException(String.format("Cannot create self link for %s! No persistent entity found!", instanceType));
         }
 
-        EntityInformation<Object, Serializable> entityInformation = repositories.getEntityInformationFor(instanceType);
-        Serializable id = entityInformation.getId(instance);
+        IdentifierAccessor entityInformation = repositories.getPersistentEntity(instanceType).getIdentifierAccessor(instance);
+        Object id = entityInformation.getIdentifier();
 
         if (id == null) {
             return entityLinks(this).linkToCollectionResource(entity.getType()).withSelfRel();
@@ -66,8 +68,12 @@ public class DynamicPersistentEntityResourceAssembler extends PersistentEntityRe
         return entityLinks(this).linkToSingleResource(entity.getType(), id).withSelfRel();
     }
 
-    private static Repositories repositories(PersistentEntityResourceAssembler persistentEntityResourceAssembler) {
+   /* private static Repositories repositories(PersistentEntityResourceAssembler persistentEntityResourceAssembler) {
         return (Repositories) forDirectFieldAccess(persistentEntityResourceAssembler).getPropertyValue("repositories");
+    }
+*/
+    private static PersistentEntities entities(PersistentEntityResourceAssembler persistentEntityResourceAssembler) {
+        return (PersistentEntities) forDirectFieldAccess(persistentEntityResourceAssembler).getPropertyValue("entities");
     }
 
     private static EntityLinks entityLinks(PersistentEntityResourceAssembler persistentEntityResourceAssembler) {
